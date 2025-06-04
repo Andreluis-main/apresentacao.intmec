@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apresentação: Simulação de Pêndulo</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/python.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling the main page */
+            background-color: #e4e8f0;
+        }
+        .slide {
+            width: 1800px;
+            min-height: 950px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            transform-origin: center center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out, transform 0.5s ease-in-out;
+            overflow: auto; /* Allow scrolling within a slide if needed */
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+            z-index: 1;
+        }
+        /* Common styles from individual slides (can be refined) */
+        .slide-container { /* Renamed from individual files to avoid conflict */
+            width: 100%;
+            min-height: 720px;
+            padding: 4rem; /* 64px */
+            position: relative;
+        }
+        .equation {
+            font-family: 'Cambria Math', Georgia, serif;
+            font-size: 1.4em;
+        }
+        .highlight {
+            color: #3a7bd5;
+            font-weight: 600;
+        }
+        .code-block {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            border: 1px solid #eee;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .code-block:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .code-block::after {
+            content: "Clique para expandir";
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 0.7rem;
+            color: #666;
+            background-color: rgba(255,255,255,0.8);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: #282c34;
+            width: 80%;
+            max-width: 1000px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            color: #aaa;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .close-modal:hover {
+            color: white;
+        }
+        .page-number {
+            position: absolute;
+            bottom: 20px;
+            right: 30px;
+            font-size: 16px;
+            color: #666;
+            background-color: rgba(255,255,255,0.7);
+            padding: 3px 10px;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .title-gradient {
+            background: linear-gradient(90deg, #3a7bd5, #00d2ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .video-placeholder {
+            background-color: rgba(0, 0, 0, 0.05);
+            border: 2px dashed #aaa;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .ai-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+        }
+        /* Ensure charts fit */
+        .energy-container {
+            position: relative;
+            height: 300px;
+        }
+        /* Syntax highlighting overrides */
+        .hljs {
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Slide 1: Título -->
+    <div class="slide active">
+        <div class="slide-container flex flex-col items-center justify-center">
+          <!-- Logo USP no canto superior esquerdo -->
+          <div class="absolute top-4 left-4">
+          </div>
+          
+          <!-- Barra azul reposicionada abaixo da logo -->
+          <div class="absolute top-16 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <div class="z-10 text-center mb-12 mt-8">
+            <h1 class="text-6xl font-bold mb-6 title-gradient">Simulação de Pêndulo</h1>
+            <h2 class="text-4xl font-semibold mb-8">Energia Mecânica e Conservação</h2>
+            <div class="w-32 h-1 bg-blue-500 mx-auto mb-8"></div>
+            <p class="text-xl mb-4">Uma exploração da física e programação por trás do movimento pendular</p>
+          </div>
+          
+          <div class="flex justify-center items-center w-full">
+            <div class="w-1/2 pr-8">
+              <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-2xl font-semibold mb-4 text-blue-700">Objetivos</h3>
+                <p class="mb-3">• Compreender a conservação da energia mecânica</p>
+                <p class="mb-3">• Visualizar a transformação entre energia potencial e cinética</p>
+                <p class="mb-3">• Analisar os efeitos das forças dissipativas</p>
+                <p class="mb-3">• Explorar a simulação computacional do movimento pendular</p>
+              </div>
+            </div>
+            
+            <div class="w-1/2">
+              <div class="flex justify-center">
+                <svg width="300" height="300" viewBox="0 0 300 300" id="pendulum">
+                  <line x1="150" y1="50" x2="150" y2="50" stroke="#333" stroke-width="4" id="rod"></line>
+                  <circle cx="150" cy="50" r="8" fill="#555" id="pivot"></circle>
+                  <circle cx="150" cy="50" r="20" fill="#3a7bd5" id="bob"></circle>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">1</div>
+        </div>
+    </div>
+
+    <!-- Slide 2: Física Conceitos -->
+    <div class="slide">
+        <div class="slide-container">
+          <div class="absolute top-0 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <h1 class="text-4xl font-bold mb-8 text-blue-700">Física: Conceitos Fundamentais</h1>
+          
+          <div class="flex">
+            <div class="w-1/2 pr-8">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold mb-4">O Pêndulo Simples</h2>
+                <p class="mb-4">Um pêndulo simples consiste em uma massa pontual suspensa por um fio inextensível e de massa desprezível, que oscila sob a ação da gravidade.</p>
+                
+                <h3 class="text-xl font-semibold mb-2 mt-4">Forças Atuantes</h3>
+                <p class="mb-2"><span class="highlight">Tensão (T)</span>: Atua ao longo do fio</p>
+                <p class="mb-4"><span class="highlight">Peso (P = mg)</span>: Atua verticalmente para baixo</p>
+                
+                <h3 class="text-xl font-semibold mb-2">Decomposição da Força Peso</h3>
+                <p class="mb-2"><span class="highlight">Componente Radial</span>: P<sub>r</sub> = mg·cos(θ)</p>
+                <p class="mb-4"><span class="highlight">Componente Tangencial</span>: P<sub>t</sub> = -mg·sen(θ)</p>
+              </div>
+              
+              <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">Equação do Movimento</h3>
+                <p class="mb-3">Aplicando a Segunda Lei de Newton:</p>
+                <p class="equation text-center mb-4">F<sub>t</sub> = m·a<sub>t</sub> = -mg·sen(θ)</p>
+                <p class="mb-3">Como a<sub>t</sub> = L·(d²θ/dt²), temos:</p>
+                <p class="equation text-center mb-4">d²θ/dt² = -(g/L)·sen(θ)</p>
+                <p class="mb-3">Para pequenas oscilações (sen(θ) ≈ θ):</p>
+                <p class="equation text-center">d²θ/dt² = -(g/L)·θ</p>
+                <p class="text-center text-sm mt-2">(Equação do Movimento Harmônico Simples)</p>
+              </div>
+            </div>
+            
+            <div class="w-1/2">
+              <div class="flex justify-center mb-6">
+                <img src="imagem1.webp" alt="Diagrama do pêndulo simples" class="rounded-lg shadow-lg" style="height: 380px;">
+              </div>
+              
+              <div class="bg-blue-50 rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-blue-700">Características do MHS</h3>
+                <p class="mb-3">• Movimento periódico com período T = 2π·√(L/g)</p>
+                <p class="mb-3">• Frequência angular ω = √(g/L)</p>
+                <p class="mb-3">• Solução da equação: θ(t) = θ<sub>0</sub>·cos(ωt + φ)</p>
+                <p class="mb-3">• Velocidade angular: ω(t) = -θ<sub>0</sub>·ω·sen(ωt + φ)</p>
+                <p class="mb-3">• Aceleração angular: α(t) = -θ<sub>0</sub>·ω²·cos(ωt + φ)</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">2</div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Física Energia -->
+    <div class="slide">
+        <div class="slide-container">
+          <div class="absolute top-0 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <h1 class="text-4xl font-bold mb-8 text-blue-700">Física: Energia e Conservação</h1>
+          
+          <div class="flex">
+            <div class="w-1/2 pr-8">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold mb-4">Energias no Pêndulo</h2>
+                
+                <h3 class="text-xl font-semibold mb-2 text-green-600">Energia Cinética (Ec)</h3>
+                <p class="mb-3">Devido à velocidade da massa:</p>
+                <p class="equation text-center mb-4">Ec = ½·m·v² = ½·m·(L·ω)²</p>
+                
+                <h3 class="text-xl font-semibold mb-2 text-red-600">Energia Potencial (Ep)</h3>
+                <p class="mb-3">Devido à altura em relação ao ponto mais baixo:</p>
+                <p class="equation text-center mb-4">Ep = m·g·h = m·g·L·(1-cos(θ))</p>
+                
+                <h3 class="text-xl font-semibold mb-2 text-purple-600">Energia Mecânica Total (Em)</h3>
+                <p class="mb-3">Soma das energias cinética e potencial:</p>
+                <p class="equation text-center">Em = Ec + Ep</p>
+              </div>
+              
+              <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">Princípio da Conservação</h3>
+                <p class="mb-3">Em um sistema ideal (sem atrito ou resistência do ar), a <span class="highlight">energia mecânica total se conserva</span>.</p>
+                <p class="mb-3">Isso significa que, embora Ec e Ep variem ao longo do movimento, sua soma permanece constante:</p>
+                <p class="equation text-center mb-4">Em = Ec + Ep = constante</p>
+                <p class="mb-3">A energia se transforma continuamente entre potencial e cinética durante a oscilação do pêndulo.</p>
+              </div>
+            </div>
+            
+            <div class="w-1/2">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4">Transformação de Energia</h3>
+                <div class="energy-container" id="energy-chart-container">
+                  <canvas id="energyChart"></canvas>
+                </div>
+                <div class="flex justify-center mt-4">
+                  <div class="flex items-center mr-4">
+                    <div class="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+                    <span>Energia Cinética</span>
+                  </div>
+                  <div class="flex items-center mr-4">
+                    <div class="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
+                    <span>Energia Potencial</span>
+                  </div>
+                  <div class="flex items-center">
+                    <div class="w-4 h-4 bg-purple-500 rounded-full mr-2"></div>
+                    <span>Energia Total</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-blue-700">Pontos Importantes</h3>
+                <p class="mb-3"><span class="font-semibold">Ponto mais baixo (θ = 0):</span> Energia é quase totalmente cinética (Ec máxima, Ep mínima)</p>
+                <p class="mb-3"><span class="font-semibold">Pontos extremos (θ = ±θ<sub>máx</sub>):</span> Energia é totalmente potencial (Ep máxima, Ec = 0)</p>
+                <p class="mb-3"><span class="font-semibold">Pontos intermediários:</span> Combinação de energia cinética e potencial</p>
+                <p class="mb-3"><span class="font-semibold">Amplitude constante:</span> Em sistemas ideais, a amplitude permanece constante, indicando conservação de energia</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">3</div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Física Atrito RK4 -->
+    <div class="slide">
+        <div class="slide-container">
+          <div class="absolute top-0 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <h1 class="text-4xl font-bold mb-8 text-blue-700">Física: Atrito e Método Numérico</h1>
+          
+          <div class="flex">
+            <div class="w-1/2 pr-8">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold mb-4">Forças Dissipativas</h2>
+                
+                <h3 class="text-xl font-semibold mb-2 text-orange-600">Atrito Viscoso</h3>
+                <p class="mb-3">Proporcional à velocidade, como a resistência do ar:</p>
+                <p class="equation text-center mb-4">F<sub>v</sub> = -b·v</p>
+                <p class="mb-3">Onde <span class="highlight">b</span> é o coeficiente de amortecimento viscoso.</p>
+                
+                <h3 class="text-xl font-semibold mb-2 text-yellow-600">Atrito Seco (Coulomb)</h3>
+                <p class="mb-3">Aproximadamente constante, opõe-se ao movimento:</p>
+                <p class="equation text-center mb-4">F<sub>s</sub> = -μ·F<sub>N</sub>·sgn(v)</p>
+                <p class="mb-3">Onde <span class="highlight">μ</span> é o coeficiente de atrito e <span class="highlight">F<sub>N</sub></span> é a força normal.</p>
+              </div>
+              
+              <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">Equação Completa do Movimento</h3>
+                <p class="mb-3">Com atrito viscoso:</p>
+                <p class="equation text-center mb-4">d²θ/dt² = -(g/L)·sen(θ) - (b/L)·dθ/dt</p>
+                
+                <p class="mb-3">Com atrito seco (simplificado no código):</p>
+                <p class="equation text-center mb-4">d²θ/dt² = -(g/L)·sen(θ) - (0.3/L)·dθ/dt</p>
+                
+                <p class="mb-3">Estas equações diferenciais não têm soluções analíticas simples, exigindo métodos numéricos.</p>
+              </div>
+            </div>
+            
+            <div class="w-1/2">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4">Método de Runge-Kutta de 4ª Ordem (RK4)</h3>
+                <p class="mb-3">O RK4 é um método numérico robusto para resolver equações diferenciais, calculando a evolução do sistema em pequenos passos de tempo.</p>
+                
+                <p class="mb-3">Para um sistema de primeira ordem y' = f(t, y):</p>
+                <div class="code-block" data-code-id="rk4-general">
+k1 = f(t, y) * dt
+k2 = f(t + dt/2, y + k1/2) * dt
+k3 = f(t + dt/2, y + k2/2) * dt
+k4 = f(t + dt, y + k3) * dt
+y(t+dt) = y(t) + (k1 + 2*k2 + 2*k3 + k4)/6
+                </div>
+                
+                <p class="mb-3 mt-4">Para o pêndulo, aplicamos RK4 ao sistema de duas equações de primeira ordem:</p>
+                <div class="code-block" data-code-id="rk4-pendulum">
+dθ/dt = ω
+dω/dt = -(g/L)·sen(θ) - (b/L)·ω
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-blue-700">Implementação no Código</h3>
+                <p class="mb-3">Na classe <span class="highlight">Pendulo</span>, o método <span class="highlight">deriv</span> calcula a aceleração angular:</p>
+                <div class="code-block" data-code-id="deriv-method">
+def deriv(self, a, v, b, dry, grav):
+    res = - (GRAV/self.L) * math.sin(a) if grav else 0
+    if dry:
+        res -= 0.3/self.L * v
+    else:
+        res -= b/self.L * v
+    return res
+                </div>
+                
+                <p class="mb-3 mt-4">O método <span class="highlight">update</span> implementa o algoritmo RK4:</p>
+                <div class="code-block" data-code-id="update-method">
+f = lambda a,v: self.deriv(a, v, b, dry, grav)
+a,v = self.ang, self.vel
+k1v,k1a = f(a,v)*dt, v*dt
+k2v,k2a = f(a+k1a/2, v+k1v/2)*dt, (v+k1v/2)*dt
+k3v,k3a = f(a+k2a/2, v+k2v/2)*dt, (v+k2v/2)*dt
+k4v,k4a = f(a+k3a, v+k3v)*dt, (v+k3v)*dt
+self.vel += (k1v + 2*k2v + 2*k3v + k4v)/6
+self.ang += (k1a + 2*k2a + 2*k3a + k4a)/6
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">4</div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Código Estrutura -->
+    <div class="slide">
+        <div class="slide-container">
+          <div class="absolute top-0 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <h1 class="text-4xl font-bold mb-8 text-blue-700">Código: Estrutura e Classes</h1>
+          
+          <div class="flex">
+            <div class="w-1/2 pr-8">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold mb-4">Organização do Código</h2>
+                <p class="mb-3">O código é modularizado em classes para melhor organização e manutenção:</p>
+                
+                <div class="mb-4">
+                  <h3 class="text-xl font-semibold mb-2 text-green-600">Elementos da Interface</h3>
+                  <ul class="list-disc pl-6">
+                    <li class="mb-1"><span class="highlight">Botao</span>: Cria botões interativos</li>
+                    <li class="mb-1"><span class="highlight">Slider</span>: Controle deslizante para valores numéricos</li>
+                    <li class="mb-1"><span class="highlight">TextBox</span>: Campo para entrada de texto/números</li>
+                  </ul>
+                </div>
+                
+                <div class="mb-4">
+                  <h3 class="text-xl font-semibold mb-2 text-blue-600">Gerenciamento</h3>
+                  <ul class="list-disc pl-6">
+                    <li class="mb-1"><span class="highlight">GUI</span>: Gerencia todos os elementos da interface</li>
+                    <li class="mb-1"><span class="highlight">Pendulo</span>: Implementa a física do pêndulo</li>
+                    <li class="mb-1"><span class="highlight">Main</span>: Orquestra a simulação e o loop principal</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">Classe Pendulo</h3>
+                <p class="mb-3">Responsável pela lógica física do pêndulo:</p>
+                <div class="code-block" data-code-id="pendulo-class">
+class Pendulo:
+    def __init__(self):
+        self.L       = 0.7
+        self.ang     = 0.0
+        self.vel     = 0.0
+        self.running = False
+
+    def deriv(self, a, v, b, dry, grav):
+        res = - (GRAV/self.L) * math.sin(a) if grav else 0
+        if dry:
+            res -= 0.3/self.L * v
+        else:
+            res -= b/self.L * v
+        return res
+
+    def update(self, dt, b, dry, grav):
+        # Implementação do método RK4
+        # ...
+
+    def draw(self, win):
+        # Desenha o pêndulo na tela
+        # ...
+                </div>
+              </div>
+            </div>
+            
+            <div class="w-1/2">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4">Classe GUI</h3>
+                <p class="mb-3">Gerencia todos os elementos interativos da interface:</p>
+                <div class="code-block" data-code-id="gui-class">
+class GUI:
+    def __init__(self):
+        # Inicializa botões, sliders e caixas de texto
+        self.start    = Botao((bx,by),(bw,bh),'Iniciar',(100,200,100),(70,170,70))
+        self.stop     = Botao((bx+bw+g,by),(bw,bh),'Finalizar',(200,100,100),(170,70,70))
+        self.clear    = Botao((bx+2*(bw+g),by),(bw,bh),'Apagar',(200,200,100),(170,170,70))
+        self.visc_btn = Botao((bx,by+bh+g),(2*bw+g,bh),'Viscosidade: Desligado',(200,200,200),(170,170,170))
+        self.dry_btn  = Botao((bx+2*((bw)+g),by+bh+g),((bw+30),bh),'Atrito Seco: Off',(200,150,50),(170,120,20))
+        self.grav_btn = Botao((bx,by+2*(bh+g)),(bw+30,bh),'Gravidade: On',(180,180,250),(150,150,200))
+        self.amp_sl   = Slider((bx,by-100),(200,20),0,90,'Ângulo °')
+        self.stop_box = TextBox((bx+220,by-100),(140,30),'Stop (s)')
+        
+        # Configurações de viscosidade
+        self.visc_levels = [0.0, 0.1, 0.5, 1.0]
+        self.visc_names  = ['Desligado','Baixa','Média','Alta']
+        self.visc_idx    = 0
+        self.dry_on      = False
+        self.grav_on     = True
+
+    def exec(self, win, evs):
+        # Processa interações e retorna parâmetros
+        # ...
+                </div>
+                
+                <p class="mb-3 mt-4">A classe GUI gerencia:</p>
+                <ul class="list-disc pl-6">
+                  <li class="mb-1">Botões para iniciar, parar e limpar a simulação</li>
+                  <li class="mb-1">Controles para viscosidade, atrito seco e gravidade</li>
+                  <li class="mb-1">Slider para definir o ângulo inicial</li>
+                  <li class="mb-1">Campo para definir tempo de parada automática</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-blue-700">Destaques da Implementação</h3>
+                <p class="mb-3"><span class="font-semibold">Modularidade:</span> Separação clara de responsabilidades entre interface, física e controle principal</p>
+                <p class="mb-3"><span class="font-semibold">Interatividade:</span> Interface gráfica completa com controles para todos os parâmetros relevantes</p>
+                <p class="mb-3"><span class="font-semibold">Visualização:</span> Representação gráfica do pêndulo e plotagem do ângulo ao longo do tempo</p>
+                <p class="mb-3"><span class="font-semibold">Flexibilidade:</span> Opções para ativar/desativar efeitos físicos (gravidade, atrito)</p>
+                <p class="mb-3"><span class="font-semibold">Precisão:</span> Implementação do método RK4 para solução numérica precisa</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">5</div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Código Loop Gráfico -->
+    <div class="slide">
+        <div class="slide-container">
+          <div class="absolute top-0 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <h1 class="text-4xl font-bold mb-8 text-blue-700">Código: Loop Principal e Gráfico</h1>
+          
+          <div class="flex">
+            <div class="w-1/2 pr-8">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold mb-4">Classe Main</h2>
+                <p class="mb-3">Responsável pelo loop principal da aplicação e coordenação geral:</p>
+                <div class="code-block" data-code-id="main-class">
+class Main:
+    def __init__(self):
+        pygame.init()
+        self.win      = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        pygame.display.set_caption('Pêndulo c/ Atrito')
+        self.clock    = pygame.time.Clock()
+        self.dt       = 1/60
+        self.gui      = GUI()
+        self.p        = Pendulo()
+        self.sessions = []  # (modo, cor, lista_angulos)
+        self.current  = []
+        self.times    = []
+        self.elapsed  = 0.0
+        self.stopped  = False
+        self.font     = pygame.font.Font(None, 24)
+
+    def run(self):
+        while True:
+            # Processa eventos, atualiza estado e desenha
+            # ...
+                </div>
+              </div>
+              
+              <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">Loop Principal</h3>
+                <p class="mb-3">O método <span class="highlight">run()</span> implementa o loop principal:</p>
+                <div class="code-block" data-code-id="run-method">
+def run(self):
+    while True:
+        evs = pygame.event.get()
+        for e in evs:
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                return
+
+        self.win.fill((255,255,255))
+
+        # Processa interface e obtém parâmetros
+        cs, cf, cc, amp, stop_t, b, dry, grav_on, modo = self.gui.exec(self.win, evs)
+
+        # Inicia simulação
+        if cs:
+            self.p.running = True
+            self.p.ang     = math.radians(amp)
+            self.current.clear()
+            self.times.clear()
+            self.elapsed = 0.0
+            self.stopped = False
+
+        # Verifica tempo de parada
+        if self.p.running and stop_t and not self.stopped and self.elapsed >= stop_t:
+            cf = True
+            self.stopped = True
+
+        # Finaliza simulação
+        if cf:
+            self.p.running = False
+            # salva sessão com próxima cor do ciclo
+            _, cor = next(COLOR_CYCLE)
+            self.sessions.append((modo, cor, self.current.copy()))
+
+        # Atualiza pêndulo e registra dados
+        self.p.update(self.dt, b, dry, grav_on)
+        if self.p.running:
+            self.current.append(self.p.ang)
+            self.times.append(self.elapsed)
+
+        # Desenha gráfico e pêndulo
+        self.draw_graph()
+        self.p.draw(self.win)
+
+        pygame.display.update()
+        self.clock.tick(60)
+        self.elapsed += self.dt
+                </div>
+              </div>
+            </div>
+            
+            <div class="w-1/2">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4">Função draw_graph</h3>
+                <p class="mb-3">Responsável por plotar o gráfico de ângulo versus tempo:</p>
+                <div class="code-block" data-code-id="draw-graph-method">
+def draw_graph(self):
+    x0, y0, w, h = 200, 50, 600, 340
+
+    # Desenha fundo e grid
+    pygame.draw.rect(self.win, (255,255,255), (x0, y0, w, h))
+    for i in range(1,6):
+        pygame.draw.line(self.win, (200,200,200),
+                         (x0, y0 + i*h//6), (x0 + w, y0 + i*h//6))
+        pygame.draw.line(self.win, (200,200,200),
+                         (x0 + i*w//6, y0), (x0 + i*w//6, y0 + h))
+    pygame.draw.rect(self.win, (0,0,0), (x0, y0, w, h), 2)
+
+    # Plota cada sessão histórica
+    for idx, (modo, cor, data) in enumerate(self.sessions):
+        # Desenha legenda
+        # ...
+
+        if len(data) > 1:
+            pts = [
+                (x0 + i*(w/len(data)),
+                 y0 + h/2 - (math.degrees(a)/90)*(h/2))
+                for i,a in enumerate(data)
+            ]
+            pygame.draw.lines(self.win, cor, False, pts, 2)
+
+    # Desenha eixos e rótulos
+    # ...
+                </div>
+                
+                <p class="mb-3 mt-4"><span class="highlight">Observação importante:</span> O gráfico plota o <span class="highlight">ângulo do pêndulo</span> em função do tempo, não as energias (cinética, potencial, mecânica).</p>
+                <p class="mb-3">No entanto, podemos <span class="highlight">inferir</span> sobre a energia através do comportamento do ângulo:</p>
+                <ul class="list-disc pl-6">
+                  <li class="mb-1">Amplitude constante → Energia mecânica conservada</li>
+                  <li class="mb-1">Amplitude decrescente → Energia sendo dissipada</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-blue-700">Características da Implementação</h3>
+                <p class="mb-3"><span class="font-semibold">Múltiplas sessões:</span> O código permite executar e comparar várias simulações com diferentes parâmetros</p>
+                <p class="mb-3"><span class="font-semibold">Ciclo de cores:</span> Cada sessão é plotada com uma cor diferente para fácil identificação</p>
+                <p class="mb-3"><span class="font-semibold">Parada automática:</span> A simulação pode ser configurada para parar após um tempo específico</p>
+                <p class="mb-3"><span class="font-semibold">Visualização em tempo real:</span> O gráfico é atualizado a cada quadro, mostrando a evolução do sistema</p>
+                <p class="mb-3"><span class="font-semibold">Controle de taxa de quadros:</span> O relógio do Pygame mantém uma taxa constante de 60 FPS</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">6</div>
+        </div>
+    </div>
+
+    <!-- Slide 7: Demonstração -->
+<!-- Slide 7 (novo): Demonstração da Simulação -->
+<!-- Slide 7 (novo): Demonstração da Simulação -->
+<div class="slide">
+  <div class="slide-container">
+
+    <!-- Barra azul decorativa -->
+    <div class="absolute top-24 left-0 w-full h-16 bg-blue-100 opacity-30"></div>
+
+    <h1 class="text-4xl font-bold mb-8 text-blue-700 mt-24">
+      Demonstração da Simulação
+    </h1>
+
+    <div class="flex flex-col items-center">
+      <!-- <video> no lugar do placeholder -->
+      <div class="video-wrapper w-full mb-8">
+        <video controls width="100%">
+          <source src="demonstração (online-video-cutter.com).mp4" type="video/mp4">
+          Seu navegador não suporta a tag de vídeo HTML5.
+        </video>
+      </div>
+
+      <div class="grid grid-cols-3 gap-6 w-full">
+        <div class="feature-box">
+          <div class="flex items-center mb-2">
+            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+              <i class="fas fa-sliders-h text-blue-600"></i>
+            </div>
+            <h3 class="text-lg font-semibold">Controles Interativos</h3>
+          </div>
+          <p class="text-sm">
+            Ajuste do ângulo inicial, tempo de parada, e ativação/desativação de efeitos físicos.
+          </p>
+        </div>
+        <!-- (outros feature-boxes seguem iguais) -->
+        <div class="feature-box">
+          <div class="flex items-center mb-2">
+            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+              <i class="fas fa-chart-line text-green-600"></i>
+            </div>
+            <h3 class="text-lg font-semibold">Gráficos em Tempo Real</h3>
+          </div>
+          <p class="text-sm">
+            Visualização dinâmica do ângulo e das energias durante a simulação.
+          </p>
+        </div>
+        <!-- …demais feature-boxes… -->
+      </div>
+    </div>
+
+    <!-- Número da página atualizado para 7 -->
+    <div class="page-number">7</div>
+
+  </div> <!-- fecha slide-container -->
+</div> <!-- fecha slide -->
+
+
+    <!-- Slide 8: Experiência IA -->
+    <div class="slide">
+        <div class="slide-container">
+          <div class="absolute top-0 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <h1 class="text-4xl font-bold mb-8 text-blue-700">Experiência e Uso de IA</h1>
+          
+          <div class="flex">
+            <div class="w-1/2 pr-8">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold mb-4">Desenvolvimento do Projeto</h2>
+                
+                <h3 class="text-xl font-semibold mb-3 text-green-600">Desafios Encontrados</h3>
+                <p class="mb-4">O desenvolvimento deste trabalho combinou o estudo da física com a aplicação de técnicas de programação e simulação numérica. Enfrentamos desafios como:</p>
+                <p class="mb-2">• Compreender e implementar corretamente o método RK4</p>
+                <p class="mb-2">• Projetar uma interface gráfica funcional e intuitiva com Pygame</p>
+                <p class="mb-4">• Depurar o código para garantir a precisão física da simulação</p>
+                
+                <h3 class="text-xl font-semibold mb-3 text-blue-600">Aprendizados</h3>
+                <p class="mb-2">• Aprofundamento nos conceitos de energia e conservação</p>
+                <p class="mb-2">• Familiarização com métodos numéricos para equações diferenciais</p>
+                <p class="mb-2">• Desenvolvimento de habilidades em Python e Pygame</p>
+                <p class="mb-2">• Visualização de dados físicos em tempo real</p>
+              </div>
+            </div>
+            
+            <div class="w-1/2">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4">Colaboração com IA</h3>
+                <p class="mb-4">A interação com ferramentas de Inteligência Artificial foi extremamente útil durante o desenvolvimento do projeto. Utilizamos a IA para:</p>
+                
+                <div class="mb-4">
+                  <h4 class="text-lg font-semibold mb-2 text-purple-600">Análise de Código</h4>
+                  <p class="mb-3">• Revisão da estrutura e organização do código</p>
+                  <p class="mb-3">• Identificação de possíveis melhorias e otimizações</p>
+                  <p class="mb-3">• Verificação da implementação correta dos conceitos físicos</p>
+                </div>
+                
+                <div class="mb-4">
+                  <h4 class="text-lg font-semibold mb-2 text-purple-600">Suporte Conceitual</h4>
+                  <p class="mb-3">• Explicação de conceitos físicos e matemáticos complexos</p>
+                  <p class="mb-3">• Esclarecimento sobre o método RK4 e sua aplicação</p>
+                  <p class="mb-3">• Discussão sobre conservação de energia e efeitos dissipativos</p>
+                </div>
+                
+                <div>
+                  <h4 class="text-lg font-semibold mb-2 text-purple-600">Apresentação</h4>
+                  <p class="mb-3">• Estruturação do conteúdo e roteiro</p>
+                  <p class="mb-3">• Geração de visualizações e diagramas explicativos</p>
+                  <p class="mb-3">• Revisão da clareza e precisão das explicações</p>
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-blue-700">Reflexões</h3>
+                <p class="mb-3">A colaboração com ferramentas de IA acelerou significativamente o desenvolvimento e enriqueceu o entendimento do projeto.</p>
+                <p class="mb-3">O equilíbrio entre o conhecimento humano e o suporte da IA permitiu uma abordagem mais profunda e abrangente dos conceitos físicos e da implementação computacional.</p>
+                <p class="mb-3">Esta experiência demonstra como a IA pode ser uma aliada valiosa no processo educacional e no desenvolvimento de projetos científicos.</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">8</div>
+        </div>
+    </div>
+
+    <!-- Slide 9: Ferramentas IA -->
+    <div class="slide">
+        <div class="slide-container">
+          <div class="absolute top-0 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <h1 class="text-4xl font-bold mb-8 text-blue-700">Ferramentas de IA Utilizadas</h1>
+          
+          <div class="flex flex-col items-center">
+            <div class="bg-white rounded-lg shadow-lg p-8 w-4/5 mb-8">
+              <div class="flex items-center mb-6">
+                <div class="ai-logo bg-blue-600 text-white">
+                  <i class="fas fa-robot text-4xl"></i>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold">Manus (Google Gemini)</h2>
+                  <p class="text-gray-600">Assistente de IA avançado para análise de código e geração de conteúdo</p>
+                </div>
+              </div>
+              
+              <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-3 text-blue-700">Contribuições</h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <p class="mb-2"><i class="fas fa-code mr-2 text-blue-500"></i> <span class="font-semibold">Análise de código:</span> Revisão da implementação do método RK4 e da estrutura geral do programa</p>
+                    <p class="mb-2"><i class="fas fa-tasks mr-2 text-blue-500"></i> <span class="font-semibold">Planejamento de tarefas:</span> Organização do fluxo de trabalho e definição de etapas</p>
+                    <p class="mb-2"><i class="fas fa-file-alt mr-2 text-blue-500"></i> <span class="font-semibold">Geração de texto:</span> Criação do roteiro e conteúdo dos slides</p>
+                  </div>
+                  <div>
+                    <p class="mb-2"><i class="fas fa-lightbulb mr-2 text-blue-500"></i> <span class="font-semibold">Explicação de conceitos:</span> Esclarecimento sobre física do pêndulo e conservação de energia</p>
+                    <p class="mb-2"><i class="fas fa-search mr-2 text-blue-500"></i> <span class="font-semibold">Revisão da lógica física:</span> Verificação da correta aplicação dos princípios físicos</p>
+                    <p class="mb-2"><i class="fas fa-chart-line mr-2 text-blue-500"></i> <span class="font-semibold">Visualização de dados:</span> Sugestões para representação gráfica dos resultados</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 rounded-lg shadow-lg p-6 w-4/5">
+              <h3 class="text-xl font-semibold mb-4 text-center text-blue-700">Benefícios da Integração com IA</h3>
+              
+              <div class="grid grid-cols-3 gap-6">
+                <div class="bg-white p-4 rounded-lg shadow">
+                  <div class="text-center mb-3">
+                    <i class="fas fa-tachometer-alt text-3xl text-blue-600"></i>
+                  </div>
+                  <h4 class="text-lg font-semibold mb-2 text-center">Aceleração do Desenvolvimento</h4>
+                  <p class="text-center">Redução significativa do tempo necessário para implementação e depuração</p>
+                </div>
+                
+                <div class="bg-white p-4 rounded-lg shadow">
+                  <div class="text-center mb-3">
+                    <i class="fas fa-brain text-3xl text-purple-600"></i>
+                  </div>
+                  <h4 class="text-lg font-semibold mb-2 text-center">Aprofundamento Conceitual</h4>
+                  <p class="text-center">Melhor compreensão dos conceitos físicos e matemáticos envolvidos</p>
+                </div>
+                
+                <div class="bg-white p-4 rounded-lg shadow">
+                  <div class="text-center mb-3">
+                    <i class="fas fa-puzzle-piece text-3xl text-green-600"></i>
+                  </div>
+                  <h4 class="text-lg font-semibold mb-2 text-center">Integração Multidisciplinar</h4>
+                  <p class="text-center">Conexão eficiente entre física teórica, matemática aplicada e programação</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">9</div>
+        </div>
+    </div>
+
+    <!-- Slide 10: Conclusão -->
+    <div class="slide">
+        <div class="slide-container">
+          <div class="absolute top-0 left-0 w-full h-24 bg-blue-100 opacity-30"></div>
+          
+          <h1 class="text-4xl font-bold mb-8 text-blue-700">Conclusão e Próximos Passos</h1>
+          
+          <div class="flex">
+            <div class="w-1/2 pr-8">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold mb-4">Recapitulação</h2>
+                <p class="mb-3">Nesta apresentação, exploramos:</p>
+                <p class="mb-2">• A física do pêndulo simples e as forças atuantes</p>
+                <p class="mb-2">• O princípio da conservação da energia mecânica</p>
+                <p class="mb-2">• Os efeitos das forças dissipativas (atrito viscoso e seco)</p>
+                <p class="mb-2">• O método numérico RK4 para resolver a equação diferencial</p>
+                <p class="mb-2">• A implementação em Python/Pygame da simulação</p>
+                <p class="mb-2">• A visualização do movimento e do gráfico de ângulo versus tempo</p>
+              </div>
+              
+              <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">Limitações Atuais</h3>
+                <p class="mb-4">A simulação atual, embora funcional e educativa, apresenta algumas limitações:</p>
+                <p class="mb-3">• Não calcula nem plota explicitamente as energias (cinética, potencial, mecânica)</p>
+                <p class="mb-3">• Considera apenas o pêndulo simples (massa pontual)</p>
+                <p class="mb-3">• Não explora fenômenos mais complexos como ressonância ou pêndulos acoplados</p>
+              </div>
+            </div>
+            
+            <div class="w-1/2">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4">Próximos Passos</h3>
+                <div class="mb-4">
+                  <h4 class="text-lg font-semibold mb-2 text-green-600">Melhorias na Visualização</h4>
+                  <p class="mb-2">• Implementar o cálculo e a plotagem das energias cinética, potencial e mecânica total</p>
+                  <p class="mb-2">• Adicionar gráficos de fase (posição × velocidade)</p>
+                  <p class="mb-2">• Criar visualizações 3D para melhor compreensão espacial</p>
+                </div>
+                
+                <div class="mb-4">
+                  <h4 class="text-lg font-semibold mb-2 text-blue-600">Expansões do Modelo</h4>
+                  <p class="mb-2">• Implementar o pêndulo físico (não pontual)</p>
+                  <p class="mb-2">• Adicionar pêndulos duplos ou múltiplos (sistemas caóticos)</p>
+                  <p class="mb-2">• Explorar fenômenos de ressonância e forçamento</p>
+                </div>
+                
+                <div>
+                  <h4 class="text-lg font-semibold mb-2 text-purple-600">Aplicações Educacionais</h4>
+                  <p class="mb-2">• Desenvolver módulos interativos para ensino de física</p>
+                  <p class="mb-2">• Criar desafios e problemas baseados na simulação</p>
+                  <p class="mb-2">• Integrar com plataformas de aprendizado online</p>
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-blue-700">Considerações Finais</h3>
+                <p class="mb-3">A simulação do pêndulo, mesmo em sua forma atual, oferece uma visualização valiosa do movimento e dos efeitos da conservação e dissipação de energia.</p>
+                <p class="mb-3">O projeto demonstra como conceitos físicos fundamentais podem ser implementados computacionalmente, permitindo experimentação e análise interativas.</p>
+                <p class="mb-3">A colaboração entre conhecimento humano e ferramentas de IA enriqueceu significativamente o desenvolvimento e a compreensão do projeto.</p>
+                <p class="mb-3 text-center mt-6 font-semibold">Obrigado pela atenção!</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Número da página -->
+          <div class="page-number">10</div>
+        </div>
+    </div>
+
+    <!-- Slide 11: Créditos Finais -->
+<div class="slide">
+  <div class="slide-container">
+    <!-- Logo USP no canto superior esquerdo -->
+    <div class="absolute top-4 left-4">
+    </div>
+    
+    <!-- Barra azul decorativa -->
+    <div class="absolute top-24 left-0 w-full h-16 bg-blue-100 opacity-30"></div>
+    
+    <div class="flex flex-col items-center justify-center h-full">
+      <h1 class="text-5xl font-bold mb-8 title-gradient">Créditos Finais</h1>
+      
+      <div class="thank-you text-center mb-8">
+        <span class="text-blue-700">Obrigado!</span>
+      </div>
+      
+      <div class="grid grid-cols-3 gap-8 w-full max-w-5xl mb-12">
+        <div class="team-member">
+          <div class="avatar">
+            <i class="fas fa-user text-3xl text-blue-600"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">André Luís</h3>
+          <p class="text-gray-600">Desenvolvimento Geral</p>
+        </div>
+        
+        <div class="team-member">
+          <div class="avatar">
+            <i class="fas fa-user text-3xl text-blue-600"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Davi Mühlhäusser</h3>
+          <p class="text-gray-600">Demonstrações Físicas</p>
+        </div>
+        
+        <div class="team-member">
+          <div class="avatar">
+            <i class="fas fa-user text-3xl text-blue-600"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Fernando António</h3>
+          <p class="text-gray-600">Desenvolvimento Geral</p>
+        </div>
+        
+        <div class="team-member">
+          <div class="avatar">
+            <i class="fas fa-user text-3xl text-blue-600"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Tata Vinde</h3>
+          <p class="text-gray-600">Desenvolvimento do Código</p>
+        </div>
+        
+        <div class="team-member">
+          <div class="avatar">
+            <i class="fas fa-user text-3xl text-blue-600"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Victor H. Fenerich</h3>
+          <p class="text-gray-600">Desenvolvimento Geral</p>
+        </div>
+        
+        <div class="team-member">
+          <div class="avatar">
+            <i class="fas fa-user text-3xl text-blue-600"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Victor H. Xavier</h3>
+          <p class="text-gray-600">Testes Gerais</p>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-3xl text-center">
+        <h3 class="text-xl font-semibold mb-4 text-blue-700">Simulação de Pêndulo: Energia Mecânica e Conservação</h3>
+        <p class="mb-2">Uma exploração da física e programação por trás do movimento pendular</p>
+        <p class="text-gray-600">Universidade de São Paulo - 2025</p>
+      </div>
+    </div>
+    
+    <!-- Número da página -->
+    <div class="page-number">11</div>
+  </div>
+</div>
+
+    
+    <!-- Modal para código expandido -->
+    <div class="modal" id="codeModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <pre><code class="language-python" id="modalCode"></code></pre>
+        </div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                }
+            });
+            // Re-run scripts for the active slide if necessary
+            runActiveSlideScripts(index);
+        }
+
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % slides.length;
+            showSlide(currentSlide);
+        }
+
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            showSlide(currentSlide);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowRight') {
+                nextSlide();
+            } else if (event.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Código expandido em modal
+        const modal = document.getElementById('codeModal');
+        const modalCode = document.getElementById('modalCode');
+        const closeModal = document.querySelector('.close-modal');
+        
+        // Inicializar highlight.js
+        hljs.highlightAll();
+        
+        // Configurar cliques nos blocos de código
+        document.querySelectorAll('.code-block').forEach(block => {
+            block.addEventListener('click', function() {
+                const codeId = this.getAttribute('data-code-id');
+                const codeContent = this.textContent;
+                modalCode.textContent = codeContent;
+                hljs.highlightElement(modalCode);
+                modal.classList.add('active');
+            });
+        });
+        
+        // Fechar modal
+        closeModal.addEventListener('click', function() {
+            modal.classList.remove('active');
+        });
+        
+        // Fechar modal ao clicar fora do conteúdo
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+
+        // Function to re-run scripts for specific slides (like charts or animations)
+        function runActiveSlideScripts(index) {
+            // Clear previous chart instances if they exist
+            if (window.energyChartInstance) {
+                window.energyChartInstance.destroy();
+                window.energyChartInstance = null;
+            }
+            if (window.pendulumAnimationId) {
+                cancelAnimationFrame(window.pendulumAnimationId);
+                window.pendulumAnimationId = null;
+            }
+
+            if (index === 0) { // Slide Título
+                const rod = document.getElementById('rod');
+                const bob = document.getElementById('bob');
+                if (rod && bob) {
+                    const length = 200;
+                    const pivot = {x: 150, y: 50};
+                    let angle = Math.PI/6;
+                    let time = 0;
+                    
+                    function updatePendulum() {
+                        time += 0.05;
+                        angle = Math.PI/6 * Math.sin(time);
+                        
+                        const bobX = pivot.x + length * Math.sin(angle);
+                        const bobY = pivot.y + length * Math.cos(angle);
+                        
+                        rod.setAttribute('x2', bobX);
+                        rod.setAttribute('y2', bobY);
+                        bob.setAttribute('cx', bobX);
+                        bob.setAttribute('cy', bobY);
+                        
+                        window.pendulumAnimationId = requestAnimationFrame(updatePendulum);
+                    }
+                    updatePendulum();
+                }
+            } else if (index === 2) { // Slide Física Energia
+                const ctx = document.getElementById('energyChart')?.getContext('2d');
+                if (ctx) {
+                    const labels = Array.from({length: 100}, (_, i) => i);
+                    const kineticData = [];
+                    const potentialData = [];
+                    const totalData = [];
+                    
+                    for (let i = 0; i < 100; i++) {
+                        const angle = Math.PI/3 * Math.sin(i * 2 * Math.PI / 100);
+                        const velocity = Math.PI/3 * Math.cos(i * 2 * Math.PI / 100);
+                        const kinetic = Math.pow(velocity, 2);
+                        const potential = 1 - Math.cos(angle);
+                        const total = kinetic + potential;
+                        kineticData.push(kinetic);
+                        potentialData.push(potential);
+                        totalData.push(total);
+                    }
+                    
+                    window.energyChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: 'Energia Cinética', data: kineticData, borderColor: 'rgba(75, 192, 75, 1)', backgroundColor: 'rgba(75, 192, 75, 0.2)', tension: 0.4, fill: true },
+                                { label: 'Energia Potencial', data: potentialData, borderColor: 'rgba(255, 99, 71, 1)', backgroundColor: 'rgba(255, 99, 71, 0.2)', tension: 0.4, fill: true },
+                                { label: 'Energia Total', data: totalData, borderColor: 'rgba(153, 102, 255, 1)', backgroundColor: 'rgba(153, 102, 255, 0.2)', tension: 0.4, fill: false, borderWidth: 3 }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { x: { title: { display: true, text: 'Tempo' } }, y: { title: { display: true, text: 'Energia (normalizada)' }, min: 0 } },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+            }
+        }
+
+        // Initial setup
+        showSlide(currentSlide);
+
+    </script>
+
+</body>
+</html>
